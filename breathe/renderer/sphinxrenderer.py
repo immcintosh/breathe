@@ -73,76 +73,6 @@ class BaseObject:
 # ----------------------------------------------------------------------------
 
 
-class CPPClassObject(BaseObject, cpp.CPPClassObject):
-    pass
-
-
-class CPPUnionObject(BaseObject, cpp.CPPUnionObject):
-    pass
-
-
-class CPPFunctionObject(BaseObject, cpp.CPPFunctionObject):
-    pass
-
-
-class CPPMemberObject(BaseObject, cpp.CPPMemberObject):
-    pass
-
-
-class CPPTypeObject(BaseObject, cpp.CPPTypeObject):
-    pass
-
-
-class CPPConceptObject(BaseObject, cpp.CPPConceptObject):
-    pass
-
-
-class CPPEnumObject(BaseObject, cpp.CPPEnumObject):
-    pass
-
-
-class CPPEnumeratorObject(BaseObject, cpp.CPPEnumeratorObject):
-    pass
-
-
-# ----------------------------------------------------------------------------
-
-
-class CStructObject(BaseObject, c.CStructObject):
-    pass
-
-
-class CUnionObject(BaseObject, c.CUnionObject):
-    pass
-
-
-class CFunctionObject(BaseObject, c.CFunctionObject):
-    pass
-
-
-class CMemberObject(BaseObject, c.CMemberObject):
-    pass
-
-
-class CTypeObject(BaseObject, c.CTypeObject):
-    pass
-
-
-class CEnumObject(BaseObject, c.CEnumObject):
-    pass
-
-
-class CEnumeratorObject(BaseObject, c.CEnumeratorObject):
-    pass
-
-
-class CMacroObject(BaseObject, c.CMacroObject):
-    pass
-
-
-# ----------------------------------------------------------------------------
-
-
 class PyFunction(BaseObject, python.PyFunction):
     pass
 
@@ -232,75 +162,83 @@ if cs is not None:
 
 
 class DomainDirectiveFactory:
-    # A mapping from node kinds to domain directives and their names.
-    cpp_classes = {
-        "variable": (CPPMemberObject, "var"),
-        "class": (CPPClassObject, "class"),
-        "struct": (CPPClassObject, "struct"),
-        "interface": (CPPClassObject, "class"),
-        "function": (CPPFunctionObject, "function"),
-        "friend": (CPPFunctionObject, "function"),
-        "signal": (CPPFunctionObject, "function"),
-        "slot": (CPPFunctionObject, "function"),
-        "concept": (CPPConceptObject, "concept"),
-        "enum": (CPPEnumObject, "enum"),
-        "enum-class": (CPPEnumObject, "enum-class"),
-        "typedef": (CPPTypeObject, "type"),
-        "using": (CPPTypeObject, "type"),
-        "union": (CPPUnionObject, "union"),
-        "namespace": (CPPTypeObject, "type"),
-        "enumvalue": (CPPEnumeratorObject, "enumerator"),
-        "define": (CMacroObject, "macro"),
-    }
-    c_classes = {
-        "variable": (CMemberObject, "var"),
-        "function": (CFunctionObject, "function"),
-        "define": (CMacroObject, "macro"),
-        "struct": (CStructObject, "struct"),
-        "union": (CUnionObject, "union"),
-        "enum": (CEnumObject, "enum"),
-        "enumvalue": (CEnumeratorObject, "enumerator"),
-        "typedef": (CTypeObject, "type"),
-    }
-    python_classes = {
-        # TODO: PyFunction is meant for module-level functions
-        #       and PyAttribute is meant for class attributes, not module-level variables.
-        #       Somehow there should be made a distinction at some point to get the correct
-        #       index-text and whatever other things are different.
-        "function": (PyFunction, "function"),
-        "variable": (PyAttribute, "attribute"),
-        "class": (PyClasslike, "class"),
-        "namespace": (PyClasslike, "class"),
-    }
+    @staticmethod
+    def setup(app: Sphinx):
+        domains = app.registry.domains
 
-    if php is not None:
-        php_classes = {
-            "function": (PHPNamespaceLevel, "function"),
-            "class": (PHPClassLike, "class"),
-            "attr": (PHPClassMember, "attr"),
-            "method": (PHPClassMember, "method"),
-            "global": (PHPGlobalLevel, "global"),
+        c_dir = domains["c"].directives
+        DomainDirectiveFactory.c_classes = {
+            "variable": (type("CMemberObject", (BaseObject, c_dir["var"]), {}), "var"),
+            "function": (type("CFunctionObject", (BaseObject, c_dir["function"]), {}), "function"),
+            "define": (type("CMacroObject", (BaseObject, c_dir["macro"]), {}), "macro"),
+            "struct": (type("CStructObject", (BaseObject, c_dir["struct"]), {}), "struct"),
+            "union": (type("CUnionObject", (BaseObject, c_dir["union"]), {}), "union"),
+            "enum": (type("CEnumObject", (BaseObject, c_dir["enum"]), {}), "enum"),
+            "enumvalue": (type("CEnumeratorObject", (BaseObject, c_dir["enumerator"]), {}), "enumerator"),
+            "typedef": (type("CTypeObject", (BaseObject, c_dir["type"]), {}), "type"),
         }
-        php_classes_default = php_classes["class"]  # Directive when no matching ones were found
 
-    if cs is not None:
-        cs_classes = {
-            # 'doxygen-name': (CSharp class, key in CSharpDomain.object_types)
-            "namespace": (CSharpNamespacePlain, "namespace"),
-            "class": (CSharpClass, "class"),
-            "struct": (CSharpStruct, "struct"),
-            "interface": (CSharpInterface, "interface"),
-            "function": (CSharpMethod, "function"),
-            "method": (CSharpMethod, "method"),
-            "variable": (CSharpVariable, "var"),
-            "property": (CSharpProperty, "property"),
-            "event": (CSharpEvent, "event"),
-            "enum": (CSharpEnum, "enum"),
-            "enumvalue": (CSharpEnumValue, "enumerator"),
-            "attribute": (CSharpAttribute, "attr"),
-            # Fallback to cpp domain
-            "typedef": (CPPTypeObject, "type"),
+        cpp_dir = domains["cpp"].directives
+        DomainDirectiveFactory.cpp_classes = {
+            "variable": (type("CPPMemberObject", (BaseObject, cpp_dir["var"]), {}), "var"),
+            "class": (type("CPPClassObject", (BaseObject, cpp_dir["class"]), {}), "class"),
+            "struct": (type("CPPStructObject", (BaseObject, cpp_dir["struct"]), {}), "struct"),
+            "interface": (type("CPPInterfaceObject", (BaseObject, cpp_dir["class"]), {}), "class"),
+            "function": (type("CPPFunctionObject", (BaseObject, cpp_dir["function"]), {}), "function"),
+            "friend": (type("CPPFriendObject", (BaseObject, cpp_dir["function"]), {}), "function"),
+            "signal": (type("CPPSignalObject", (BaseObject, cpp_dir["function"]), {}), "function"),
+            "slot": (type("CPPSlotObject", (BaseObject, cpp_dir["function"]), {}), "function"),
+            "concept": (type("CPPConceptObject", (BaseObject, cpp_dir["concept"]), {}), "concept"),
+            "enum": (type("CPPEnumObject", (BaseObject, cpp_dir["enum"]), {}), "enum"),
+            "enum-class": (type("CPPEnumClassObject", (BaseObject, cpp_dir["enum-class"]), {}), "enum-class"),
+            "typedef": (type("CPPTypeObject", (BaseObject, cpp_dir["type"]), {}), "type"),
+            "using": (type("CPPUsingObject", (BaseObject, cpp_dir["type"]), {}), "type"),
+            "union": (type("CPPUnionObject", (BaseObject, cpp_dir["union"]), {}), "union"),
+            "namespace": (type("CPPNamespaceObject", (BaseObject, cpp_dir["namespace"]), {}), "type"),
+            "enumvalue": (type("CPPEnumeratorObject", (BaseObject, cpp_dir["enumerator"]), {}), "enumerator"),
+            "define": DomainDirectiveFactory.c_classes["define"],
         }
+
+        DomainDirectiveFactory.python_classes = {
+            # TODO: PyFunction is meant for module-level functions
+            #       and PyAttribute is meant for class attributes, not module-level variables.
+            #       Somehow there should be made a distinction at some point to get the correct
+            #       index-text and whatever other things are different.
+            "function": (PyFunction, "function"),
+            "variable": (PyAttribute, "attribute"),
+            "class": (PyClasslike, "class"),
+            "namespace": (PyClasslike, "class"),
+        }
+
+        if php is not None:
+            DomainDirectiveFactory.php_classes = {
+                "function": (PHPNamespaceLevel, "function"),
+                "class": (PHPClassLike, "class"),
+                "attr": (PHPClassMember, "attr"),
+                "method": (PHPClassMember, "method"),
+                "global": (PHPGlobalLevel, "global"),
+            }
+            # Directive when no matching ones were found
+            DomainDirectiveFactory.php_classes_default = DomainDirectiveFactory.php_classes["class"]
+
+        if cs is not None:
+            DomainDirectiveFactory.cs_classes = {
+                # 'doxygen-name': (CSharp class, key in CSharpDomain.object_types)
+                "namespace": (CSharpNamespacePlain, "namespace"),
+                "class": (CSharpClass, "class"),
+                "struct": (CSharpStruct, "struct"),
+                "interface": (CSharpInterface, "interface"),
+                "function": (CSharpMethod, "function"),
+                "method": (CSharpMethod, "method"),
+                "variable": (CSharpVariable, "var"),
+                "property": (CSharpProperty, "property"),
+                "event": (CSharpEvent, "event"),
+                "enum": (CSharpEnum, "enum"),
+                "enumvalue": (CSharpEnumValue, "enumerator"),
+                "attribute": (CSharpAttribute, "attr"),
+                # Fallback to cpp domain
+                "typedef": DomainDirectiveFactory.cpp_classes["typedef"],
+            }
 
     @staticmethod
     def create(domain: str, args) -> ObjectDescription:
@@ -2631,6 +2569,8 @@ class SphinxRenderer:
 
 
 def setup(app: Sphinx) -> None:
+    DomainDirectiveFactory.setup(app)
+
     app.add_config_value("breathe_debug_trace_directives", False, "")
     app.add_config_value("breathe_debug_trace_doxygen_ids", False, "")
     app.add_config_value("breathe_debug_trace_qualification", False, "")
